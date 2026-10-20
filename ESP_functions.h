@@ -6,7 +6,7 @@
 #include <esp_wifi.h>    //esp_wifi_set_inactive_time: beacon-geduld
 #include <esp_system.h>  //esp_reset_reason
 String IP_adress="0.0.0.0";
-const char SW_version[16]="V 7.0iB74";//Hier staat de software versie !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+const char SW_version[16]="V 7.0kB74";//Hier staat de software versie !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 #if defined(_GxGDEH0213B73_H_) 
 const char E_paper_version[16]="E-paper 213B73";
@@ -496,6 +496,24 @@ void zetBeaconGeduld(void) {
   uint16_t nu = 0;
   esp_wifi_get_inactive_time(WIFI_IF_STA, &nu);
   Serial.printf("[WiFi] Beacon-geduld %u s (%s)\n", nu, r == ESP_OK ? "ok" : esp_err_to_name(r));
+}
+
+// === GEEN 802.11n NAAR HET ACCESSPOINT ===
+// Paco's log met 60 s beacon-geduld (20-10): RSSI -21 (telefoon ernaast),
+// TLS lukt, maar na de kop en de eerste KB komt er een minuut lang geen
+// byte meer bij, en dan alsnog reden 200. De link is dus in beide
+// richtingen dood zodra het eerste grote blok de deur uitgaat; een zwak
+// signaal is het niet. Precies daar begint 802.11n te bundelen (AMPDU met
+// een block-ack-afspraak). Thuisrouters en de iPhone doen dat goed met
+// deze driver (IDF 3.3), Paco's twee Samsung-hotspots kennelijk niet.
+// Met alleen b/g bundelt de ESP niet; 54 Mbit/s is ruim voor een upload
+// van een paar honderd KB. Moet vóór WiFi.begin(): na de start van het
+// station en vóór de verbinding.
+void zetWifiZonder11n(void) {
+  esp_err_t r = esp_wifi_set_protocol(WIFI_IF_STA, WIFI_PROTOCOL_11B | WIFI_PROTOCOL_11G);
+  uint8_t p = 0;
+  esp_wifi_get_protocol(WIFI_IF_STA, &p);
+  Serial.printf("[WiFi] Protocol b/g zonder n (0x%02x, %s)\n", p, r == ESP_OK ? "ok" : esp_err_to_name(r));
 }
 
 void OnWiFiEvent(WiFiEvent_t event){
