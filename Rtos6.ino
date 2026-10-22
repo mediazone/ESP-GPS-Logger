@@ -143,7 +143,7 @@ void setup() {
   Serial.print("RTC_calibration_bat EEPROM = ");
   Serial.println(RTC_calibration_bat);
   Serial.println("Configuring WDT...");
-  esp_task_wdt_init(WDT_TIMEOUT,true);
+  startWatchdog(WDT_TIMEOUT);
   esp_task_wdt_add(NULL); //add current thread to WDT watch
   analog_mean = analogRead(PIN_BAT);//fill FIR filter
   SPI.begin(SPI_CLK, SPI_MISO, SPI_MOSI, ELINK_SS); //SPI is used for SD-card and for E_paper display !

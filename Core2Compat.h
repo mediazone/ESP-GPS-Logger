@@ -34,6 +34,18 @@
 #define WIFI_REDEN(info) ((info).disconnected.reason)
 #endif
 
+// De watchdog: core 3 (IDF 5) neemt een config-struct in plaats van
+// (seconden, paniek). Eén aanroep voor alle cores.
+#include <esp_task_wdt.h>
+inline void startWatchdog(uint32_t seconden) {
+#if defined(ESP_ARDUINO_VERSION_MAJOR) && ESP_ARDUINO_VERSION_MAJOR >= 3
+  esp_task_wdt_config_t cfg = { .timeout_ms = seconden * 1000, .idle_core_mask = 0, .trigger_panic = true };
+  if (esp_task_wdt_reconfigure(&cfg) != ESP_OK) esp_task_wdt_init(&cfg);
+#else
+  esp_task_wdt_init(seconden, true);
+#endif
+}
+
 // File::name() geeft op core 1 "/naam", op core 2 "naam": altijd een pad.
 inline String volledigPad(const char* naam) {
   return (naam && naam[0] == '/') ? String(naam) : String("/") + naam;
