@@ -489,6 +489,20 @@ void zetWifiProtocol(void) {
 #endif
 }
 
+// === LAAG ZENDVERMOGEN (testschakelaar WIFI_LAAG_ZENDVERMOGEN in Definitions.h) ===
+// 8,5 dBm in plaats van 19,5: kleinere stroompieken per zendburst. Slaagt de
+// upload dan wél, dan zakt de voeding tijdens het zenden in. Werkt alleen
+// nadat het station gestart en verbonden is (vóór WiFi.begin wordt het
+// genegeerd), daarom bij elke STA_CONNECTED, net als het beacon-geduld.
+void zetZendvermogen(void) {
+#if defined(WIFI_LAAG_ZENDVERMOGEN)
+  WiFi.setTxPower(WIFI_POWER_8_5dBm);
+  int8_t p = 0;
+  esp_wifi_get_max_tx_power(&p);
+  Serial.printf("[WiFi] Zendvermogen %.1f dBm\n", p / 4.0);
+#endif
+}
+
 // === BEACON-GEDULD ===
 // De Wi-Fi-driver van deze core (ESP-IDF 3.3) meldt de verbinding verbroken
 // na 6 s zonder beacons van het accesspoint (reden 200, BEACON_TIMEOUT), ook
@@ -520,6 +534,7 @@ void OnWiFiEvent(WiFiEvent_t event){
       WiFi.mode(WIFI_MODE_STA);//switch off softAP
       Serial.println("ESP32 Soft AP switched off");
       zetBeaconGeduld();
+      zetZendvermogen();
       break;
     case SYSTEM_EVENT_STA_DISCONNECTED:         //test
       Serial.println("ESP32 disconnected to WIFI");
@@ -567,8 +582,13 @@ const char* wifiReasonNaam(uint8_t reason) {
     default:                                 return "zie esp_wifi_types.h";
   }
 }
+#if defined(CORE2)
+void OnWiFiDisconnectReason(WiFiEvent_t event, WiFiEventInfo_t info) {
+  uint8_t reason = WIFI_REDEN(info);
+#else
 void OnWiFiDisconnectReason(system_event_t *event) {
   uint8_t reason = event->event_info.disconnected.reason;
+#endif
   Serial.print("[WiFi] Verbinding verbroken, reden ");
   Serial.print(reason);
   Serial.print(" - ");
@@ -654,7 +674,7 @@ void uploadTask(void * pvParameters) {
           File file = root.openNextFile();
           
           while (file) {
-            String filename = String(file.name());
+            String filename = volledigPad(file.name());
             
             if (isUploadBestand(filename)) {
               gevonden = true;
@@ -751,13 +771,23 @@ void probeerUpload(const char* filepath) {
 
   // 2. Stream het bestand in brokken van 1024 bytes
   uint8_t buffer[1024];
+#if defined(UPLOAD_TEST_UIT_RAM)
+  // Werkbank: stuur nullen uit het geheugen in plaats van de kaart te lezen,
+  // om uit te sluiten dat SD-lezen en zenden elkaar storen (server: 422).
+  memset(buffer, 0, sizeof(buffer));
+  size_t teSturen = fileSize;
+  while (writeOk && teSturen > 0) {
+    size_t bytesRead = teSturen < sizeof(buffer) ? teSturen : sizeof(buffer);
+    teSturen -= bytesRead;
+#else
   while (writeOk && file.available()) {
     size_t bytesRead = file.read(buffer, sizeof(buffer));
+#endif
     size_t bytesWritten = client.write(buffer, bytesRead);
     bytesSent += bytesWritten;
     uploadBytes = bytesSent;
     if (bytesWritten != bytesRead) writeOk = false;
-    vTaskDelay(pdMS_TO_TICKS(2)); // Voorkomt dat de Watchdog Timer (WDT) ingrijpt op Kern 0
+    vTaskDelay(pdMS_TO_TICKS(UPLOAD_PAUZE_MS)); // ook voor de watchdog op kern 0
   }
   file.close();
 

@@ -6,7 +6,7 @@ https://github.com/italocjs/ESP32_OTA_APMODE/blob/main/Main.cpp
 #include <WebServer.h>
 #include <ESPmDNS.h>
 #include <Update.h>
-#include <LITTLEFS.h>
+#include "Core2Compat.h"
 #include "Definitions.h"
 #include "OTA_html.h"
 #include <Preferences.h>

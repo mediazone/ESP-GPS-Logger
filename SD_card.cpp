@@ -1,4 +1,4 @@
-#include <LITTLEFS.h>
+#include "Core2Compat.h"
 #include "Definitions.h"
 #include "gpx.h"
 #include "sbp.h"

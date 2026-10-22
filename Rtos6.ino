@@ -16,6 +16,7 @@
 #include "Arduino.h"
 #include "Ublox.h"
 //#include "E_paper_266.h"//changing the E_paper : delete the build directory (can be found in the compile output)
+#include "Core2Compat.h"
 #include "E_paper.h"
 #include "SD_card.h"
 #include "GPS_data.h"
@@ -612,6 +613,9 @@ void taskTwo( void * parameter)
         Shut_down();
         vTaskDelete(NULL);//to avoid that screen get new updates !!!!
     }
+    #if defined (SCHERM_STIL_TIJDENS_UPLOAD)
+    else if(isUploading){}  //werkbank: geen e-paper-verversing (SPI, laadpomp) zolang er gezonden wordt
+    #endif
     else if(millis()<2000)Update_screen(BOOT_SCREEN);
     else if(trouble_screen) Update_screen(TROUBLE);
     else if(GPS_Signal_OK==false) Update_screen(WIFI_ON);

@@ -82,6 +82,10 @@
 #define WIFI_HERSTEL_MS 60000   //zo lang mag de Wi-Fi terugkomen als er nog een upload klaarstaat
 #define BEACON_GEDULD_S 15      //zo lang zonder beacons van het accesspoint voor de ESP de verbinding opgeeft (driver: 6 s)
 //#define WIFI_ALLEEN_BG        //testschakelaar: station alleen 802.11b/g, geen n
+//#define WIFI_LAAG_ZENDVERMOGEN //testschakelaar: zenden op 8,5 dBm in plaats van 19,5 (minder stroompiek)
+#define UPLOAD_PAUZE_MS 2       //pauze na elk blok van 1 KB tijdens de upload (2 = zoals altijd; hoger = rustiger zenden)
+//#define UPLOAD_TEST_UIT_RAM    //testschakelaar: nullen uit het geheugen sturen in plaats van de kaart te lezen
+//#define SCHERM_STIL_TIJDENS_UPLOAD //testschakelaar: het e-paper niet verversen zolang een upload loopt
 // De drie namen van een .gpy op de kaart, hier en nergens anders:
 // wacht op upload, verzonden, afgekeurd door de server.
 #define GPY_WACHTRIJ  "$.gpy"
