@@ -450,6 +450,12 @@ void GPSTC_info(char *GPSTC_post) {
   strcat(GPSTC_post, tekst);
 }
 void Update_bat(void){
+#if defined(BATTERIJ_STIL_TIJDENS_UPLOAD)
+    // Werkbank: geen ADC-meting zolang er gezonden wordt (de SAR-ADC deelt
+    // voeding en klok met de radio; core 1.0.6 configureert de pin bij elke
+    // analogRead opnieuw). De vorige waarde blijft staan.
+    if (isUploading) return;
+#endif
     analog_bat = analogRead(PIN_BAT);
     analog_mean=analog_bat*0.02+analog_mean*0.98;
     RTC_voltage_bat=analog_mean*RTC_calibration_bat/1000;
@@ -486,6 +492,38 @@ void zetWifiProtocol(void) {
   uint8_t p = 0;
   esp_wifi_get_protocol(WIFI_IF_STA, &p);
   Serial.printf("[WiFi] Protocol b/g zonder n (0x%02x, %s)\n", p, r == ESP_OK ? "ok" : esp_err_to_name(r));
+#endif
+}
+
+// === VOLLEDIGE RADIO-KALIBRATIE (schakelaar WIFI_VOLLEDIGE_KALIBRATIE) ===
+// Core 1.0.6 kalibreert de radio bij een gewone start maar gedeeltelijk (op
+// basis van een oude volledige meting in NVS) en na deep sleep helemaal niet.
+// Wis die opgeslagen meting vóór de Wi-Fi start: dan meet de radio opnieuw
+// volledig (ongeveer 100 ms per start). Moet vóór WiFi.mode(WIFI_STA).
+#include <esp_phy_init.h>
+void zetVolledigeKalibratie(void) {
+#if defined(WIFI_VOLLEDIGE_KALIBRATIE)
+  esp_err_t r = esp_phy_erase_cal_data_in_nvs();
+  Serial.printf("[WiFi] Volledige radio-kalibratie bij deze start (%s)\n", r == ESP_OK ? "ok" : esp_err_to_name(r));
+#endif
+}
+
+// === RADIO HERSTARTEN NA EEN VASTGELOPEN UPLOAD (schakelaar WIFI_HERSTART_BIJ_VASTLOPER) ===
+// Werkbank 22-10: als een upload vastloopt, hoort de ESP niets meer, ook al
+// werkt de telefoon gewoon. Opnieuw verbinden zoals de core dat doet (alleen
+// disconnect + begin) haalt hem daar vaak niet uit. Hier gaat de radio echt
+// uit en weer aan (esp_wifi_stop/start via WiFi.mode) en verbindt hij opnieuw
+// met het netwerk waar hij op zat; de wachtrij-logica van taskOne geeft
+// daarna de upload een nieuwe kans.
+void herstartWifiRadio(void) {
+#if defined(WIFI_HERSTART_BIJ_VASTLOPER)
+  Serial.println("[WiFi] Radio herstarten na vastgelopen upload...");
+  WiFi.disconnect();
+  WiFi.mode(WIFI_OFF);
+  vTaskDelay(pdMS_TO_TICKS(500));
+  WiFi.mode(WIFI_STA);
+  zetWifiProtocol();
+  WiFi.begin();   // laatste netwerk en wachtwoord uit de driver
 #endif
 }
 
@@ -652,9 +690,31 @@ void gemarkeerdAlsVerzonden(const char* filepath);
 void gemarkeerdAlsAfgekeurd(const char* filepath);
 bool isUploadBestand(const String& naam);
 #include <WiFiClientSecure.h>
+#if defined(UPLOAD_TEST_BESTANDEN)
+// Werkbank: zet bij het opstarten UPLOAD_TEST_BESTANDEN nieuwe testbestanden
+// van 200 kB nullen klaar (de server antwoordt 422, er ontstaat niets), zodat
+// een upload-proef geen FTP nodig heeft. Elke start krijgt eigen namen.
+void maakTestBestanden(void) {
+  uint8_t nul[1024] = {0};
+  uint16_t run = esp_random() & 0xFFFF;
+  for (int n = 1; n <= UPLOAD_TEST_BESTANDEN; n++) {
+    char naam[48];
+    snprintf(naam, sizeof(naam), "/TB-%04X-%02d-BANKTEST" GPY_WACHTRIJ, run, n);
+    File f = SD_MMC.open(naam, FILE_WRITE);
+    if (!f) { Serial.printf("[Test] kon %s niet maken\n", naam); continue; }
+    for (int k = 0; k < 200; k++) f.write(nul, sizeof(nul));
+    f.close();
+  }
+  Serial.printf("[Test] %d testbestanden klaargezet (TB-%04X-..)\n", UPLOAD_TEST_BESTANDEN, run);
+}
+#endif
+
 void uploadTask(void * pvParameters) {
    // Een vlag om bij te houden of we in de vorige loop al stabiel verbonden waren
-  bool wasConnected = false; 
+  bool wasConnected = false;
+#if defined(UPLOAD_TEST_BESTANDEN)
+  maakTestBestanden();
+#endif
   for(;;) {
     // Alleen scannen als er Wi-Fi verbinding is, de API-sleutel geldig is én de GPS NIET logt
     if (WiFi.status() == WL_CONNECTED && apiKeyValid&& ipGekregen) {
@@ -670,12 +730,18 @@ void uploadTask(void * pvParameters) {
         
         File root = SD_MMC.open("/");
         bool gevonden = false;
+#if defined(UPLOAD_SCAN_LOG)
+        Serial.printf("[Scan] map open: %s\n", root ? "ja" : "nee");
+#endif
         if (root) {
           File file = root.openNextFile();
-          
+
           while (file) {
             String filename = volledigPad(file.name());
-            
+#if defined(UPLOAD_SCAN_LOG)
+            Serial.printf("[Scan] %s%s\n", filename.c_str(), isUploadBestand(filename) ? "  <- upload" : "");
+#endif
+
             if (isUploadBestand(filename)) {
               gevonden = true;
               uploadWachtrij = apiKeyValid;  // al vóór de upload: valt de Wi-Fi tijdens deze upload weg, dan herstellen
@@ -815,6 +881,7 @@ void probeerUpload(const char* filepath) {
     Serial.print(totalLength);
     Serial.println(" bytes. Bestand blijft behouden voor een volgende poging.");
     isUploading = false;
+    herstartWifiRadio();
     return;
   }
   client.flush();

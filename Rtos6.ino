@@ -233,6 +233,7 @@ void setup() {
   // Koppel de event handler
   WiFi.onEvent(OnWiFiEvent);
   WiFi.onEvent(OnWiFiDisconnectReason, SYSTEM_EVENT_STA_DISCONNECTED);
+  zetVolledigeKalibratie();
   WiFi.mode(WIFI_STA);
   zetWifiProtocol();
   WiFi.begin(ssid, password);

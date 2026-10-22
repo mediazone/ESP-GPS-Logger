@@ -86,6 +86,11 @@
 #define UPLOAD_PAUZE_MS 2       //pauze na elk blok van 1 KB tijdens de upload (2 = zoals altijd; hoger = rustiger zenden)
 //#define UPLOAD_TEST_UIT_RAM    //testschakelaar: nullen uit het geheugen sturen in plaats van de kaart te lezen
 //#define SCHERM_STIL_TIJDENS_UPLOAD //testschakelaar: het e-paper niet verversen zolang een upload loopt
+//#define UPLOAD_SCAN_LOG        //testschakelaar: elke bestandsnaam van de SD-scan in de seriële monitor
+//#define UPLOAD_TEST_BESTANDEN 10 //testschakelaar: zet bij het opstarten zoveel testbestanden (200 kB nullen) klaar
+//#define WIFI_VOLLEDIGE_KALIBRATIE //radio bij elke start volledig kalibreren (ca. 100 ms)
+//#define WIFI_HERSTART_BIJ_VASTLOPER //radio uit en aan na een vastgelopen upload
+//#define BATTERIJ_STIL_TIJDENS_UPLOAD //testschakelaar: geen batterijmeting (ADC) zolang een upload loopt
 // De drie namen van een .gpy op de kaart, hier en nergens anders:
 // wacht op upload, verzonden, afgekeurd door de server.
 #define GPY_WACHTRIJ  "$.gpy"
