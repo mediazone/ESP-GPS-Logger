@@ -46,6 +46,17 @@ inline void startWatchdog(uint32_t seconden) {
 #endif
 }
 
+// Watchdog voeden vanuit een taak die er (nog) niet aan hangt: core 1 negeert
+// dat stil, core 3 logt bij elke aanroep een fout (tienduizenden regels per
+// minuut). Alleen voeden als deze taak echt is aangemeld.
+inline void voedWatchdog(void) {
+#if defined(ESP_ARDUINO_VERSION_MAJOR) && ESP_ARDUINO_VERSION_MAJOR >= 3
+  if (esp_task_wdt_status(NULL) == ESP_OK) esp_task_wdt_reset();
+#else
+  esp_task_wdt_reset();
+#endif
+}
+
 // File::name() geeft op core 1 "/naam", op core 2 "naam": altijd een pad.
 inline String volledigPad(const char* naam) {
   return (naam && naam[0] == '/') ? String(naam) : String("/") + naam;

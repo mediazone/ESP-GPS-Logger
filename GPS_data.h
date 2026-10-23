@@ -16,7 +16,13 @@
 #define TRACKSPEED
 extern  int index_GPS,run_count;
 extern  int index_sec;//index van laatste sample 
+#include "Core2Compat.h"
+#if defined(CORE2)
+extern uint16_t* _secSpeed;
+#else
 extern uint16_t _secSpeed[BUFFER_SIZE];
+#endif
+void zorgVoorGpsBuffers(void);
 extern float alfa_exit;
 extern Preferences preferences;
 typedef struct {

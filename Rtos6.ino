@@ -328,7 +328,7 @@ void setup() {
 
 void loop() { 
   vTaskDelay(1);         //dit moet normaal volstaan voor watchdog
-  esp_task_wdt_reset();  //en dit... Al de rest opkuisen
+  voedWatchdog();  //en dit... Al de rest opkuisen
   Update_bat();
   delay(100); 
 }
@@ -337,7 +337,7 @@ void taskOne( void * parameter )
 {
  while(true){ 
    vTaskDelay(1);         //dit moet normaal volstaan voor watchdog
-   esp_task_wdt_reset();  //en dit... Al de rest opkuisen
+   voedWatchdog();  //en dit... Al de rest opkuisen
    //wdt_task0=millis();
    // Tijdens een upload elke halve seconde: bytes bij TCP, RSSI en vrije heap.
    // De laatste regel vóór "disconnected" is de echte RSSI op dat moment (na
@@ -588,7 +588,7 @@ void taskTwo( void * parameter)
 {
   while(true){ 
     vTaskDelay(1);
-    esp_task_wdt_reset();
+    voedWatchdog();
     //wdt_task1=millis();
     if(config.Stat_screens_time!=0)stat_count++;//alleen auto switch stat screen als time>0 !!
     if (stat_count>config.screen_count)stat_count=0;//screen_count = 2

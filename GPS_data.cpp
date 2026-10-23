@@ -5,21 +5,30 @@
 #define DISPLAY_RESET_SPEED 4000  //reset speed in mm/sek for last run display
 #include "Core2Compat.h"
 #if defined(CORE2)
-// Core 2 heeft minder statisch DRAM (overloop van 2,5 kB): de 18 kB grote
-// snelheidsbuffer gaat daar op de heap, pas bij het eerste GPS-gebruik.
-// Eerder alloceren laat te weinig heap over voor de TLS-handshake van de upload.
+// Core 2/3 hebben minder vrij RAM dan core 1.0.6: met de vier grote
+// GPS-buffers statisch (_gSpeed en _secSpeed 18 kB, _lat en _long 8 kB) is
+// er te weinig over voor de TLS-handshake van de upload (core 3:
+// "X509 - Allocation of memory failed", grootste vrije blok 34 kB). Ze gaan
+// daar op de heap, pas bij het eerste GPS-gebruik; de upload gebeurt vóór
+// de GPS start.
 static uint16_t* _gSpeed = nullptr;
-static inline void zorgVoorGSpeed(void) {
-  if (!_gSpeed) _gSpeed = (uint16_t*)calloc(BUFFER_SIZE, sizeof(uint16_t));
+uint16_t* _secSpeed = nullptr;
+float* _lat = nullptr;
+float* _long = nullptr;
+void zorgVoorGpsBuffers(void) {
+  if (!_gSpeed)   _gSpeed   = (uint16_t*)calloc(BUFFER_SIZE, sizeof(uint16_t));
+  if (!_secSpeed) _secSpeed = (uint16_t*)calloc(BUFFER_SIZE, sizeof(uint16_t));
+  if (!_lat)      _lat      = (float*)calloc(BUFFER_ALFA, sizeof(float));
+  if (!_long)     _long     = (float*)calloc(BUFFER_ALFA, sizeof(float));
 }
 #else
 uint16_t _gSpeed[BUFFER_SIZE]; 
-static inline void zorgVoorGSpeed(void) {}
-#endif
+uint16_t _secSpeed[BUFFER_SIZE];
 float _lat[BUFFER_ALFA]; 
 float _long[BUFFER_ALFA];
+void zorgVoorGpsBuffers(void) {}
+#endif
 float alfa_exit;//test voor functie afstand punt tot lijn !!
-uint16_t _secSpeed[BUFFER_SIZE];
 int index_GPS=-1;//bij eerste doorgang op 0 beginnen !!
 int index_sec=-1;//bij eerste doorgang op 0 beginnen !!
 int alfa_counter;
@@ -31,7 +40,7 @@ Point p1,p2,p3,p4;
 //Ook de laatste bufferpositie wordt opgeslagen in een globale variable, index_GPS
 
 void GPS_data::push_data(float latitude,float longitude,uint32_t gSpeed) {//gspeed in mm/s !!!
-  zorgVoorGSpeed();
+  zorgVoorGpsBuffers();
     static int dynamic_state=0;
     if((S2.avg_s>24000)&(config.dynamic_model==1)&(dynamic_state==0)){  //omschakelen naar dynamic_model "portable", only works with speed<25 m/s !!!
           dynamic_state=1;                   //test with 5 m/s, this is 18 km/h
@@ -268,7 +277,7 @@ GPS_speed::GPS_speed(int afstand){
   m_set_distance=afstand;  
 }
 double GPS_speed::Update_distance(int actual_run){
-  zorgVoorGSpeed(); 
+  zorgVoorGpsBuffers(); 
   m_Set_Distance=m_set_distance*1000*config.sample_rate;//opgelet, m_set_distance moet nu in mm, dus *1000 + functie van sample_rate !! 
   m_distance=m_distance+_gSpeed[index_GPS%BUFFER_SIZE];//resolutie = 0.1 mm nu, 2,147,483,647 = 214748 m, dus maar 214 km !! 
   if((index_GPS-m_index)>=BUFFER_SIZE){     //controle buffer overflow
@@ -345,7 +354,7 @@ void GPS_time::Reset_stats(void){
   avg_5runs=0;
 }
 float GPS_time::Update_speed(int actual_run){
-  zorgVoorGSpeed();
+  zorgVoorGpsBuffers();
   if(time_window*config.sample_rate<BUFFER_SIZE){      //indien tijdvenster kleiner is dan de sample_rate*BUFFER, normale buffer gebruiken
         avg_s_sum=avg_s_sum+_gSpeed[index_GPS%BUFFER_SIZE]; //altijd gSpeed optellen bij elke update
         if(index_GPS>=time_window*config.sample_rate){

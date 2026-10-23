@@ -670,7 +670,7 @@ boolean Button_push::Button_pushed(void) {
 }
 void Search_for_wifi(void) {
   while ((WiFi.status() != WL_CONNECTED)&(SoftAP_connection==false)){  
-    if(Short_push39.Button_pushed()|Short_push19.Button_pushed()){ap_mode=true;esp_task_wdt_reset();break;}
+    if(Short_push39.Button_pushed()|Short_push19.Button_pushed()){ap_mode=true;voedWatchdog();break;}
     Update_bat();        
     if(ap_mode==false)Update_screen(WIFI_STATION);
     else Update_screen(WIFI_SOFT_AP);
@@ -798,7 +798,10 @@ void probeerUpload(const char* filepath) {
   Serial.println("[Upload] Verbinden met speedsurf.app via HTTPS... "); 
   // Maak verbinding met speedsurf.app op de beveiligde HTTPS-poort (443)
   if (!client.connect("speedsurf.app", 443)) {
-    Serial.println("Mislukt!");
+    char tlsFout[100] = "";
+    int tlsCode = client.lastError(tlsFout, sizeof(tlsFout));
+    Serial.printf("Mislukt! TLS-fout %d (%s), Wi-Fi status %d, RSSI %d, grootste vrije blok %u\n",
+                  tlsCode, tlsFout, WiFi.status(), WiFi.RSSI(), (unsigned)heap_caps_get_largest_free_block(MALLOC_CAP_8BIT));
     file.close();
     isUploading = false;
     Serial.println("[RAM Check] Vrije Heap op dit moment: ");

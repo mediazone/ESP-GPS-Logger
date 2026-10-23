@@ -5,8 +5,13 @@
 #include "GPS_data.h" //use of struct Point
 #include "SD_card.h"    
 
+#if defined(CORE2)
+extern float* _lat;
+extern float* _long;
+#else
 extern float _lat[BUFFER_ALFA]; 
 extern float _long[BUFFER_ALFA];
+#endif
 extern GPS_speed M500;
 extern int index_GPS;
 extern float calibration_speed;
