@@ -887,6 +887,10 @@ void Update_screen(int screen) {
     if(upload_file_rejected){display.setCursor(offset,46);display.print("File rejected!");};
     if(!apiKeyValid&&config.auto_upload_speedsurf){display.setCursor(offset,46);display.print("API Key not valid");};
     if(auto_upload_time_out){display.setCursor(offset,46);display.print("Upload time-out!");};
+    //The phone left the soft AP: say when the Wi-Fi goes off and the GPS starts, on the
+    //row the upload lines use (those are for a station, never shown in soft AP mode).
+    int apOff = apOffInSeconds();
+    if(apOff>=0){display.setCursor(offset,46);display.printf("Wi-Fi off in %d s",apOff);};
     //DEVICE_BOOT_LOG(2);
     if (SoftAP_connection != true) {
       display.setCursor(offset, 102);

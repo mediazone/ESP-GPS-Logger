@@ -120,6 +120,7 @@ extern int start_logging_millis;
 extern bool sdOK,LITTLEFS_OK;
 extern bool Wifi_on;
 extern bool SoftAP_connection;
+int apOffInSeconds();  //Rtos6.ino: seconds until the soft AP goes off, -1 when not counting
 extern bool GPS_Signal_OK;
 extern bool Shut_down_Save_session;
 extern bool auto_upload_time_out;

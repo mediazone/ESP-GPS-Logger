@@ -45,6 +45,22 @@ int Wifi_rssi = 0;
 Preferences preferences;
 bool ap_mode=false;
 bool sleep_mode=false;
+// Seconds until taskOne switches the soft AP off (the rule at "No web request since a
+// phone left"), or -1 while that is not counting: nobody left, or an app or a browser
+// asked something after the phone left (it is back). For the WIFI_ON screen, so the
+// jump to "Waiting for Sat" does not come out of the blue.
+int apOffInSeconds(){
+  unsigned long apLeft = apLeftAt;  //read once: the Wi-Fi event task writes it
+  if(!ap_mode||!SoftAP_connection||apLeft==0) return -1;
+  unsigned long lastHttp = lastHttpMs;
+  if((long)(lastHttp-apLeft)>0) return -1;  //a request after the phone left: it came back
+  unsigned long now = millis();
+  long grace = (long)AP_GRACE_MS-(long)(now-apLeft);
+  long window = (long)AP_HTTP_WINDOW_MS-(long)(now-lastHttp);
+  long left = grace>window?grace:window;
+  if(left<=0) return 0;
+  return (int)((left+999)/1000);
+}
 //bool isUploading=false;
 //extern bool reset_boot; 
 // Globale variabelen voor het traject en de metingen
